@@ -3,6 +3,7 @@ import {ChatBubble, ChatBubbleProps, createErrorBubbleProps} from "./ChatBubble.
 import {useEffect, useRef, useState} from "react";
 import {Colors} from "../colors/Colors.ts";
 import { Ollama } from "../gpts/Ollama.ts";
+import { OllamaHistory } from "../gpts/OllamaHistory.ts";
 import { ChatGPT } from "../gpts/ChatGPT.ts";
 import { RolePlay } from "../roleplays/roleplays.ts";
 
@@ -11,12 +12,17 @@ export interface ChatContainerProps {
 }
 
 
-// Fuck this type.
+
+
+
+export const ChatContainer = ({context}: ChatContainerProps) => {
+
+    // Fuck this type.
 const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['message'] | ChatBubbleProps['loading']>> = {
     // 0 is on the left, 1 is on the right
     // @ts-ignore
     0: {
-        name: 'OH-SO',
+        name: context.ai1Name || '',
         avatarSrc: '',
         color: Colors.blue,
         textColor: 'white',
@@ -24,7 +30,7 @@ const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['me
     },
     // @ts-ignore
     1: {
-        name: 'SO-SO',
+        name: context.ai2Name || '',
         avatarSrc: '',
         color: Colors.purple,
         textColor: 'white',
@@ -33,14 +39,16 @@ const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['me
 }
 
 
-export const ChatContainer = ({context}: ChatContainerProps) => {
-
     let isPlaying = false;
-    const firstGpt = useRef(new ChatGPT());
-    const secondGpt = useRef(new ChatGPT());
+
+    const firstGpt = useRef(new OllamaHistory());
+    const secondGpt = useRef(new OllamaHistory());
     const gpts = [firstGpt, secondGpt];
 
     const [messages, setMessages] = useState<ChatBubbleProps[]>([]);
+
+    let messageHistory = messages.map(message => ({role: 'user', content: message.message}))
+
 
 
     const replaceMessages = (newMessage: ChatBubbleProps) => {
@@ -71,8 +79,13 @@ export const ChatContainer = ({context}: ChatContainerProps) => {
             })
 
 
+
+
+
+   
+
             try {
-                const response = await gpt.prompt(lastContext, !!side, context);
+                const response = await gpt.prompt(messageHistory, !!side, context);
                 if(typeof response === "string")
                 {
                     lastContext = response;
@@ -119,7 +132,7 @@ export const ChatContainer = ({context}: ChatContainerProps) => {
 
 
     return <Flex gap="4" w="100%" direction="column" p={4}>
-        <Text fontSize="xx-large">{context.prompt}</Text>
+        <Text fontSize="xx-large" color="white">{context.prompt}</Text>
         {messages.map((message, i) => <ChatBubble key={i} {...message} />)}
     </Flex>
 }

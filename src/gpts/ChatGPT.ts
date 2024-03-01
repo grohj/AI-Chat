@@ -3,10 +3,13 @@ import OpenAI from "openai";
 import { ChatCompletionChunk } from "openai/resources/index.mjs";
 import { RolePlay } from "../roleplays/roleplays";
 
+console.log("ENV", import.meta.env.VITE_OPENAI_KEY);
+
 const openai = new OpenAI({
-    apiKey:'not for your eys',
+    apiKey: import.meta.env.VITE_OPENAI_KEY,
     dangerouslyAllowBrowser:true
   });
+
 
 export class ChatGPT implements GptApi<string, ChatCompletionChunk>{
     async prompt(text: string, second: boolean, play:RolePlay): Promise<AsyncIterable<ChatCompletionChunk>> {
@@ -14,7 +17,7 @@ export class ChatGPT implements GptApi<string, ChatCompletionChunk>{
         if (second) {
             
             return await openai.chat.completions.create({ model: "gpt-3.5-turbo", messages: [
-                { role: 'user', content: play.instructionToAi2}, { role: 'system', content: text }
+                { role: 'system', content: play.instructionToAi2}, { role: 'user', content: text }
             ], stream: true, });
            
         }
