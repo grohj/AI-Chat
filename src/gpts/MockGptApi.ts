@@ -8,7 +8,8 @@ const RANDOM_SHIT = ["Once, you made promises. Better products for customers, mo
 
 export class MockGptApi implements GptApi<string, string> {
 
-    async prompt(text: string) {
+    async prompt(text: string, second:boolean) {
+        if(second) return RANDOM_SHIT[Math.trunc(Math.random()*3)];
         await new Promise((res) => setTimeout(res, 3000));
 
         if (Math.random() > 0.7)

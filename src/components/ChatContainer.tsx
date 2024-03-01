@@ -1,20 +1,32 @@
-import {Flex, Text} from "@chakra-ui/react";
+import {Center, Flex, Heading, Text} from "@chakra-ui/react";
 import {ChatBubble, ChatBubbleProps, createErrorBubbleProps} from "./ChatBubble.tsx";
 import {useEffect, useRef, useState} from "react";
-import {MockGptApi} from "../gpts/MockGptApi.ts";
 import {Colors} from "../colors/Colors.ts";
+import { Ollama } from "../gpts/Ollama.ts";
+import { OllamaHistory } from "../gpts/OllamaHistory.ts";
+import { ChatGPT } from "../gpts/ChatGPT.ts";
+import { RolePlay } from "../roleplays/roleplays.ts";
 
 export interface ChatContainerProps {
-    context: string
+    context: RolePlay;
+    onChatEnd: () => void;
 }
 
 
-// Fuck this type.
+
+
+
+export const ChatContainer = ({context, onChatEnd}: ChatContainerProps) => {
+
+
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    // Fuck this type.
 const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['message'] | ChatBubbleProps['loading']>> = {
     // 0 is on the left, 1 is on the right
     // @ts-ignore
     0: {
-        name: 'OH-SO',
+        name: context.ai1Name || '',
         avatarSrc: '',
         color: Colors.blue,
         textColor: 'white',
@@ -22,7 +34,7 @@ const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['me
     },
     // @ts-ignore
     1: {
-        name: 'SO-SO',
+        name: context.ai2Name || '',
         avatarSrc: '',
         color: Colors.purple,
         textColor: 'white',
@@ -31,15 +43,16 @@ const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['me
 }
 
 
-export const ChatContainer = ({context}: ChatContainerProps) => {
-
-
     let isPlaying = false;
-    const firstGpt = useRef(new MockGptApi());
-    const secondGpt = useRef(new MockGptApi());
+
+    const firstGpt = useRef(new ChatGPT());
+    const secondGpt = useRef(new ChatGPT());
     const gpts = [firstGpt, secondGpt];
 
     const [messages, setMessages] = useState<ChatBubbleProps[]>([]);
+
+    let messageHistory = messages.map(message => ({role: 'user', content: message.message}))
+
 
 
     const replaceMessages = (newMessage: ChatBubbleProps) => {
@@ -49,7 +62,7 @@ export const ChatContainer = ({context}: ChatContainerProps) => {
     }
 
     const playMessages = async () => {
-        let lastContext = context
+        let lastContext = context.prompt;
         for (let i = 0; i < 10; i++) {
             const side = i % 2;
             const gpt = gpts[side].current;
@@ -69,16 +82,41 @@ export const ChatContainer = ({context}: ChatContainerProps) => {
 
             })
 
+            
+            setTimeout(() => containerRef.current?.scrollIntoView({behavior: 'smooth', block: 'end'}), 300);
+
+
+
+
+
+
+   
 
             try {
-                const response = await gpt.prompt(i + '. ' + lastContext);
-                lastContext = response;
+                const response = await gpt.prompt(lastContext, !!side, context);
+                if(typeof response === "string")
+                {
+                    lastContext = response;
 
-                replaceMessages({
-                    ...gptBubbleData[side],
-                    message: response,
-                    loading: false
-                })
+                    replaceMessages({
+                        ...gptBubbleData[side],
+                        message: response,
+                        loading: false
+                    })
+                }
+                else {
+                    let responseText:string = "";
+                    for await (const part of response) {
+                        responseText += gpt.extractFromStream(part);
+                        replaceMessages({
+                            ...gptBubbleData[side],
+                            message: responseText,
+                            loading: false
+                        });  
+                    }
+                    lastContext=responseText;
+                     
+                }
             } catch (e) {
                 console.error("GptApi Prompting failed: ", e)
                 replaceMessages(createErrorBubbleProps({
@@ -88,11 +126,18 @@ export const ChatContainer = ({context}: ChatContainerProps) => {
                 }))
                 // TODO: Decrement `i` ? And maybe come up with better loop altogether.
             }
+
+            console.log("Scrolling into view", containerRef);
+            
+            setTimeout(() => containerRef.current?.scrollIntoView({behavior: 'smooth', block: 'end'}), 300);
         }
+
+        setTimeout(() => onChatEnd(), 120000);
     }
 
     useEffect(() => {
         // Fucking React triggers this useEffect twice
+        // Do not use React 18 ;) 
         if (!isPlaying) {
             isPlaying = true;
             playMessages()
@@ -100,8 +145,8 @@ export const ChatContainer = ({context}: ChatContainerProps) => {
     }, [])
 
 
-    return <Flex gap="4" w="100%" direction="column" p={4}>
-        <Text fontSize="xx-large">{context}</Text>
+    return <Flex justifyItems="center" alignContent="center" id="messagesContainer" gap="4" w="100%" direction="column" p={4} pb={300} ref={containerRef}>
+        <Heading py={8} fontSize="xx-large" color="white">{context.prompt}</Heading>
         {messages.map((message, i) => <ChatBubble key={i} {...message} />)}
     </Flex>
 }
