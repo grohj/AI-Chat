@@ -1,4 +1,4 @@
-import {Flex, Text} from "@chakra-ui/react";
+import {Center, Flex, Heading, Text} from "@chakra-ui/react";
 import {ChatBubble, ChatBubbleProps, createErrorBubbleProps} from "./ChatBubble.tsx";
 import {useEffect, useRef, useState} from "react";
 import {Colors} from "../colors/Colors.ts";
@@ -9,13 +9,17 @@ import { RolePlay } from "../roleplays/roleplays.ts";
 
 export interface ChatContainerProps {
     context: RolePlay;
+    onChatEnd: () => void;
 }
 
 
 
 
 
-export const ChatContainer = ({context}: ChatContainerProps) => {
+export const ChatContainer = ({context, onChatEnd}: ChatContainerProps) => {
+
+
+    const containerRef = useRef<HTMLDivElement>(null);
 
     // Fuck this type.
 const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['message'] | ChatBubbleProps['loading']>> = {
@@ -41,8 +45,8 @@ const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['me
 
     let isPlaying = false;
 
-    const firstGpt = useRef(new OllamaHistory());
-    const secondGpt = useRef(new OllamaHistory());
+    const firstGpt = useRef(new ChatGPT());
+    const secondGpt = useRef(new ChatGPT());
     const gpts = [firstGpt, secondGpt];
 
     const [messages, setMessages] = useState<ChatBubbleProps[]>([]);
@@ -78,6 +82,10 @@ const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['me
 
             })
 
+            
+            setTimeout(() => containerRef.current?.scrollIntoView({behavior: 'smooth', block: 'end'}), 300);
+
+
 
 
 
@@ -85,7 +93,7 @@ const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['me
    
 
             try {
-                const response = await gpt.prompt(messageHistory, !!side, context);
+                const response = await gpt.prompt(lastContext, !!side, context);
                 if(typeof response === "string")
                 {
                     lastContext = response;
@@ -118,7 +126,13 @@ const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['me
                 }))
                 // TODO: Decrement `i` ? And maybe come up with better loop altogether.
             }
+
+            console.log("Scrolling into view", containerRef);
+            
+            setTimeout(() => containerRef.current?.scrollIntoView({behavior: 'smooth', block: 'end'}), 300);
         }
+
+        setTimeout(() => onChatEnd(), 120000);
     }
 
     useEffect(() => {
@@ -131,8 +145,8 @@ const gptBubbleData: Record<number, Exclude<ChatBubbleProps, ChatBubbleProps['me
     }, [])
 
 
-    return <Flex gap="4" w="100%" direction="column" p={4}>
-        <Text fontSize="xx-large" color="white">{context.prompt}</Text>
+    return <Flex justifyItems="center" alignContent="center" id="messagesContainer" gap="4" w="100%" direction="column" p={4} pb={300} ref={containerRef}>
+        <Heading py={8} fontSize="xx-large" color="white">{context.prompt}</Heading>
         {messages.map((message, i) => <ChatBubble key={i} {...message} />)}
     </Flex>
 }

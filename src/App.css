@@ -1,5 +1,15 @@
+@font-face {
+  font-family: Midnight;
+  src: url(../media/oh-so.otf);
+}
+
+@font-face {
+  font-family: Midnight Fat;
+  src: url(../media/oh-so-fat.otf);
+}
+
 #root {
-  max-width: 1280px;
+
   margin: 0 auto;
   padding: 2rem;
   text-align: center;
